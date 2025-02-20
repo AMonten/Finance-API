@@ -13,8 +13,8 @@ Esta API permite consultar información financiera a través de múltiples fuent
 ## 🚀 Instalación
 ### **1️⃣ Clonar el Repositorio**
 ```sh
-git clone https://github.com/tuusuario/api-financiera.git
-cd api-financiera
+git clone https://github.com/AMonten/Finance-API.git
+cd Finance-API
 ```
 
 ### **2️⃣ Crear un Entorno Virtual**
@@ -50,7 +50,7 @@ REDIS_DB=0
 # Configuración General
 DEBUG=True
 ENVIRONMENT=development
-SECRET_KEY=tu_secreto
+SECRET_KEY=tu_clave
 ```
 
 ---
