@@ -122,7 +122,7 @@ async def search_instruments(
 @app.get("/prices", response_model=Union[Dict, ErrorResponse], tags=["Mercado"])
 async def get_prices(
     symbol: str = Query(..., min_length=1),
-    interval: str = Query("daily", regex="^(daily|1min|5min|15min|30min|60min)$")
+    interval: str = Query("daily", pattern="^(daily|1min|5min|15min|30min|60min)$")
 ):
     """Obtener datos históricos de precios"""
     try:
@@ -146,7 +146,7 @@ async def get_prices(
 @app.get("/financials", response_model=Union[List[FinancialData], ErrorResponse], tags=["Fundamentales"])
 async def get_financials(
     symbol: str = Query(..., min_length=1),
-    period: str = Query("annual", regex="^(annual|quarterly)$")
+    period: str = Query("annual", pattern="^(annual|quarterly)$")
 ):
     try:
         financials = fmp.get_income_statement(symbol, period)
@@ -166,7 +166,7 @@ async def get_financials(
 @app.get("/financials/ratios", response_model=Union[List[FinancialRatios], ErrorResponse], tags=["Fundamentales"])
 async def get_financial_ratios(
     symbol: str = Query(..., min_length=1),
-    period: str = Query("annual", regex="^(annual|quarterly)$")
+    period: str = Query("annual", pattern="^(annual|quarterly)$")
 ):
     """Obtener ratios financieros clave (liquidez, apalancamiento, rentabilidad)"""
     try:
@@ -188,7 +188,7 @@ async def get_financial_ratios(
 async def get_news(
     query: str = Query(..., min_length=2),
     limit: int = Query(5, ge=1, le=100),
-    sort_by: str = Query("publishedAt", regex="^(relevancy|popularity|publishedAt)$")
+    sort_by: str = Query("publishedAt", pattern="^(relevancy|popularity|publishedAt)$")
 ):
     """Obtener noticias financieras relevantes"""
     try:
