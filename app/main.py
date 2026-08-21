@@ -11,6 +11,8 @@ from app.services import (
     openfigi
 )
 from app.config import Config
+from app.schemas import FinancialRatios
+from app.utils import cache
 from pydantic import BaseModel
 
 # Configurar aplicación FastAPI
@@ -66,6 +68,27 @@ class ErrorResponse(BaseModel):
 async def root():
     """Endpoint de bienvenida"""
     return {"message": "Bienvenido a la API Financiera Integrada"}
+
+@app.get("/health", tags=["Root"])
+async def health_check():
+    """Verifica el estado de la API y sus dependencias (Redis)"""
+    redis_error = None
+    try:
+        cache.redis_client.ping()
+        redis_status = "connected"
+    except Exception as e:
+        redis_status = "unreachable"
+        redis_error = str(e)
+
+    healthy = redis_status == "connected"
+    return JSONResponse(
+        status_code=200 if healthy else 503,
+        content={
+            "status": "ok" if healthy else "degraded",
+            "redis": redis_status,
+            "details": redis_error
+        }
+    )
 
 @app.get("/instruments", response_model=Union[List[InstrumentInfo], ErrorResponse], tags=["Instrumentos"])
 async def search_instruments(
@@ -138,6 +161,27 @@ async def get_financials(
         return JSONResponse(
             status_code=500,
             content={"error": "Error obteniendo datos financieros"}
+        )
+
+@app.get("/financials/ratios", response_model=Union[List[FinancialRatios], ErrorResponse], tags=["Fundamentales"])
+async def get_financial_ratios(
+    symbol: str = Query(..., min_length=1),
+    period: str = Query("annual", regex="^(annual|quarterly)$")
+):
+    """Obtener ratios financieros clave (liquidez, apalancamiento, rentabilidad)"""
+    try:
+        ratios = fmp.get_financial_ratios(symbol, period)
+        if isinstance(ratios, dict) and "error" in ratios:
+            return JSONResponse(
+                status_code=400,
+                content=ratios
+            )
+        return ratios
+    except Exception as e:
+        logger.error(f"Error en ratios financieros: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Error obteniendo ratios financieros"}
         )
 
 @app.get("/news", response_model=Union[Dict[str, Union[int, List[NewsItem]]], ErrorResponse], tags=["Noticias"])
