@@ -1,5 +1,11 @@
 # 📊 API Financiera con FastAPI
 
+![Python](https://img.shields.io/badge/python-3.x-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.68%2B-009688?logo=fastapi&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-cache-DC382D?logo=redis&logoColor=white)
+![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
 ## 📌 Descripción
 Esta API permite consultar información financiera a través de múltiples fuentes de datos como **Alpha Vantage, Financial Modeling Prep (FMP), OpenFIGI y NewsAPI**.
 
