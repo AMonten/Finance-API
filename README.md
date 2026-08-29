@@ -99,7 +99,7 @@ GET /news?query=Apple&limit=5&sort_by=publishedAt
 ## 🧪 Pruebas
 Ejecutar tests con:
 ```sh
-pytest tests/
+pytest app/tests/
 ```
 
 ---

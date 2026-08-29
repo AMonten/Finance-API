@@ -5,9 +5,6 @@ from typing import Optional
 
 load_dotenv()
 
-# Debug: Mostrar todas las variables cargadas
-print("Variables de entorno cargadas:", {k: v for k, v in os.environ.items() if "API" in k})
-
 class Config:
     # API Keys (requeridas)
     ALPHA_VANTAGE_API_KEY: str = os.getenv("ALPHA_VANTAGE_API_KEY", "")
@@ -24,8 +21,7 @@ class Config:
     # Configuración general
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "default-insecure-key-!cambiar-en-produccion!")
-    
+
     # Límites de tasa
     ALPHA_VANTAGE_RATE_LIMIT: int = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT", "5"))
     FMP_RATE_LIMIT: int = int(os.getenv("FMP_RATE_LIMIT", "250"))
