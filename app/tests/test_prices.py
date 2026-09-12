@@ -28,6 +28,13 @@ MOCK_ERROR_RESPONSE = {
     "Error Message": "Invalid API call. Please retry or visit the documentation."
 }
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Evita que el contador de RateLimiter se filtre entre tests (estado de clase compartido)"""
+    RateLimiter._limits["alpha_vantage"]["calls"] = 0
+    RateLimiter._limits["alpha_vantage"].pop("last_reset", None)
+    yield
+
 def test_get_stock_prices_success(requests_mock: Mocker):
     """Prueba exitosa de obtención de precios"""
     requests_mock.get(
@@ -100,19 +107,21 @@ def test_get_stock_prices_empty_symbol():
     assert "error" in result
     assert "El símbolo no puede estar vacío" in result["error"]
 
-@patch.dict("app.config.Config.__dict__", {"ALPHA_VANTAGE_API_KEY": None})
+@patch.object(Config, "ALPHA_VANTAGE_API_KEY", None)
 def test_missing_api_key():
     """Prueba de falta de API key"""
     result = get_stock_prices("AAPL")
-    
+
     assert "error" in result
     assert "API key no configurada" in result["error"]
 
 def test_different_intervals(requests_mock: Mocker):
     """Prueba de diferentes intervalos temporales"""
     intervals = ["1min", "5min", "15min", "30min", "60min", "daily"]
-    
+
     for interval in intervals:
+        # Resetear el contador: son 6 intervalos y el límite es 5 llamadas/ventana
+        RateLimiter._limits["alpha_vantage"]["calls"] = 0
         requests_mock.get(
             "https://www.alphavantage.co/query",
             json=MOCK_SUCCESS_RESPONSE

@@ -12,7 +12,7 @@ from app.services import (
 )
 from app.config import Config
 from app.schemas import FinancialRatios
-from app.utils import cache, RateLimiter
+from app.utils import cache
 from pydantic import BaseModel
 
 # Configurar aplicación FastAPI
@@ -125,16 +125,11 @@ async def get_prices(
     interval: str = Query("daily", pattern="^(daily|1min|5min|15min|30min|60min)$")
 ):
     """Obtener datos históricos de precios"""
-    if not RateLimiter.check_limit("alpha_vantage"):
-        return JSONResponse(
-            status_code=429,
-            content={"error": "Límite de solicitudes a Alpha Vantage excedido"}
-        )
     try:
         prices = alpha_vantage.get_stock_prices(symbol, interval)
         if "error" in prices:
             return JSONResponse(
-                status_code=400,
+                status_code=prices.get("code", 400),
                 content=prices
             )
         return prices
@@ -153,16 +148,11 @@ async def get_financials(
     symbol: str = Query(..., min_length=1),
     period: str = Query("annual", pattern="^(annual|quarterly)$")
 ):
-    if not RateLimiter.check_limit("fmp"):
-        return JSONResponse(
-            status_code=429,
-            content={"error": "Límite de solicitudes a Financial Modeling Prep excedido"}
-        )
     try:
         financials = fmp.get_income_statement(symbol, period)
         if isinstance(financials, dict) and "error" in financials:
             return JSONResponse(
-                status_code=400,
+                status_code=financials.get("code", 400),
                 content=financials
             )
         return financials
@@ -179,16 +169,11 @@ async def get_financial_ratios(
     period: str = Query("annual", pattern="^(annual|quarterly)$")
 ):
     """Obtener ratios financieros clave (liquidez, apalancamiento, rentabilidad)"""
-    if not RateLimiter.check_limit("fmp"):
-        return JSONResponse(
-            status_code=429,
-            content={"error": "Límite de solicitudes a Financial Modeling Prep excedido"}
-        )
     try:
         ratios = fmp.get_financial_ratios(symbol, period)
         if isinstance(ratios, dict) and "error" in ratios:
             return JSONResponse(
-                status_code=400,
+                status_code=ratios.get("code", 400),
                 content=ratios
             )
         return ratios
@@ -206,16 +191,11 @@ async def get_news(
     sort_by: str = Query("publishedAt", pattern="^(relevancy|popularity|publishedAt)$")
 ):
     """Obtener noticias financieras relevantes"""
-    if not RateLimiter.check_limit("newsapi"):
-        return JSONResponse(
-            status_code=429,
-            content={"error": "Límite de solicitudes a NewsAPI excedido"}
-        )
     try:
         news_data = news.get_financial_news(query, limit, sort_by)
         if "error" in news_data:
             return JSONResponse(
-                status_code=400,
+                status_code=news_data.get("code", 400),
                 content=news_data
             )
         return news_data

@@ -2,6 +2,7 @@ import requests
 import logging
 from typing import Dict, List, Union
 from app.config import Config
+from app.utils import RateLimiter
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -22,6 +23,10 @@ def get_financial_ratios(symbol: str, period: str = "annual") -> Union[List[Dict
 
         if period not in ["annual", "quarterly"]:
             raise ValueError("Periodo debe ser 'annual' o 'quarterly'")
+
+        if not RateLimiter.check_limit("fmp"):
+            logger.warning("Límite de llamadas a Financial Modeling Prep excedido")
+            return {"error": "Límite de llamadas a Financial Modeling Prep excedido", "code": 429}
 
         # Construir parámetros de la solicitud
         params = {"apikey": Config.FMP_API_KEY, "period": period}
@@ -85,7 +90,11 @@ def get_income_statement(symbol: str, period: str = "annual") -> Union[List[Dict
         # Validar parámetros
         if period not in ["annual", "quarterly"]:
             raise ValueError("Periodo debe ser 'annual' o 'quarterly'")
-        
+
+        if not RateLimiter.check_limit("fmp"):
+            logger.warning("Límite de llamadas a Financial Modeling Prep excedido")
+            return {"error": "Límite de llamadas a Financial Modeling Prep excedido", "code": 429}
+
         response = requests.get(
             f"https://financialmodelingprep.com/api/v3/income-statement/{symbol}",
             params={"apikey": Config.FMP_API_KEY, "period": period},

@@ -2,6 +2,7 @@ import requests
 import logging
 from typing import Dict, Union
 from app.config import Config
+from app.utils import RateLimiter
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -29,12 +30,19 @@ def get_stock_prices(symbol: str, interval: str = "daily") -> Dict[str, Union[di
     """
     try:
         # Validar parámetros iniciales
+        if not symbol or not symbol.strip():
+            raise ValueError("El símbolo no puede estar vacío")
+
         if not Config.ALPHA_VANTAGE_API_KEY:
             logger.error("API key de Alpha Vantage no configurada")
-            return {"error": "Configuración de API incompleta"}
-        
+            return {"error": "API key no configurada"}
+
         if interval not in FUNCTION_MAP:
             raise ValueError(f"Intervalo no válido: {interval}")
+
+        if not RateLimiter.check_limit("alpha_vantage"):
+            logger.warning("Límite de llamadas a Alpha Vantage excedido")
+            return {"error": "Límite de llamadas excedido", "code": 429}
 
         logger.info(f"Solicitando precios para {symbol} ({interval})")
         
@@ -65,11 +73,11 @@ def get_stock_prices(symbol: str, interval: str = "daily") -> Dict[str, Union[di
         # Manejar errores de Alpha Vantage
         if "Error Message" in data:
             logger.error(f"Error en API: {data['Error Message']}")
-            return {"error": data["Error Message"]}
-            
+            return {"error": f"Error en Alpha Vantage: {data['Error Message']}"}
+
         if "Note" in data:
             logger.error("Límite de API alcanzado")
-            return {"error": data["Note"]}
+            return {"error": f"Error en Alpha Vantage: {data['Note']}"}
         
         return data
     
