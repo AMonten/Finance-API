@@ -68,12 +68,10 @@ def get_financial_news(
             logger.error(f"Error en NewsAPI: {error_msg}")
             return {"error": error_msg}
         
-        # Verificar si hay artículos
         articles = data.get("articles", [])
         if not articles:
-            logger.warning(f"No se encontraron noticias para la consulta: {query}")
-            return {"error": "No se encontraron noticias para la consulta proporcionada"}
-        
+            logger.info(f"No se encontraron noticias para la consulta: {query}")
+
         # Formatear resultados
         processed_articles = []
         for article in articles:
