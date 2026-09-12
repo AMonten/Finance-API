@@ -7,6 +7,11 @@ from app.config import Config
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# FMP espera 'quarter' (singular), no 'quarterly', para datos trimestrales.
+# Se mantiene 'quarterly' como valor publico de esta API (ya es el contrato
+# establecido en /financials y /financials/ratios) y se traduce aca.
+FMP_PERIOD_MAP = {"annual": "annual", "quarterly": "quarter"}
+
 def get_financial_ratios(symbol: str, period: str = "annual") -> Union[List[Dict[str, Union[dict, str]]], Dict[str, str]]:
     """
     Obtiene ratios financieros de Financial Modeling Prep
@@ -24,7 +29,7 @@ def get_financial_ratios(symbol: str, period: str = "annual") -> Union[List[Dict
             raise ValueError("Periodo debe ser 'annual' o 'quarterly'")
 
         # Construir parámetros de la solicitud
-        params = {"apikey": Config.FMP_API_KEY, "period": period}
+        params = {"apikey": Config.FMP_API_KEY, "period": FMP_PERIOD_MAP[period]}
 
         # Hacer la solicitud a la API
         response = requests.get(
@@ -88,7 +93,7 @@ def get_income_statement(symbol: str, period: str = "annual") -> Union[List[Dict
         
         response = requests.get(
             f"https://financialmodelingprep.com/api/v3/income-statement/{symbol}",
-            params={"apikey": Config.FMP_API_KEY, "period": period},
+            params={"apikey": Config.FMP_API_KEY, "period": FMP_PERIOD_MAP[period]},
             timeout=10
         )
         
