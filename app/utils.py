@@ -1,7 +1,8 @@
 # app/utils.py
+import json
 import logging
 import time
-from functools import lru_cache, wraps
+from functools import wraps
 from datetime import datetime, timedelta
 from typing import Callable, Any, Optional, Dict
 import redis
@@ -22,21 +23,17 @@ class CacheManager:
             decode_responses=True
         )
     
-    @lru_cache(maxsize=100)
-    def memory_cache(self, func: Callable, *args, **kwargs):
-        """Caché en memoria usando LRU"""
-        return func(*args, **kwargs)
-    
-    def redis_cache(self, key: str, ttl: int = 300):
-        """Decorador para caché en Redis"""
+    def redis_cache(self, ttl: int = 300):
+        """Decorador para cachear en Redis el resultado de una función, usando sus argumentos como parte de la clave"""
         def decorator(func: Callable):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                cached = self.redis_client.get(key)
-                if cached:
-                    return cached
+                cache_key = f"{func.__module__}.{func.__qualname__}:{args}:{sorted(kwargs.items())}"
+                cached = self.redis_client.get(cache_key)
+                if cached is not None:
+                    return json.loads(cached)
                 result = func(*args, **kwargs)
-                self.redis_client.setex(key, ttl, result)
+                self.redis_client.setex(cache_key, ttl, json.dumps(result))
                 return result
             return wrapper
         return decorator
@@ -138,21 +135,3 @@ def validate_api_key(api_key: str, expected_key: str) -> bool:
 def format_currency(value: float, currency: str) -> str:
     """Formatea valores monetarios"""
     return f"{currency} {value:,.2f}"
-
-def validate_config():
-    """Valida que todas las variables de configuración estén presentes"""
-    required_keys = [
-        'ALPHA_VANTAGE_API_KEY',
-        'FMP_API_KEY',
-        'NEWS_API_KEY',
-        'OPENFIGI_API_KEY'
-    ]
-    
-    missing = [key for key in required_keys if not getattr(Config, key, None)]
-    if missing:
-        raise EnvironmentError(
-            f"Faltan variables de entorno: {', '.join(missing)}"
-        )
-
-# Ejecutar validación de configuración al importar
-validate_config()
