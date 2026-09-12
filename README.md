@@ -1,7 +1,8 @@
 # 📊 API Financiera con FastAPI
 
 ![Python](https://img.shields.io/badge/python-3.x-blue?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.68%2B-009688?logo=fastapi&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?logo=fastapi&logoColor=white)
+![Pydantic](https://img.shields.io/badge/Pydantic-2.x-E92063?logo=pydantic&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-cache-DC382D?logo=redis&logoColor=white)
 ![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
@@ -10,9 +11,10 @@
 Esta API permite consultar información financiera a través de múltiples fuentes de datos como **Alpha Vantage, Financial Modeling Prep (FMP), OpenFIGI y NewsAPI**.
 
 ✅ Desarrollada con **FastAPI** para alto rendimiento.  
-✅ Usa **Redis** para cacheo y optimización.  
+✅ Usa **Redis** para el health-check (`/health`); el decorador de caché en `app/utils.py` está listo pero aún no se aplica a ningún endpoint.  
 ✅ Implementa **pytest** para pruebas automáticas.  
 ✅ Arquitectura modular con separación de servicios.  
+✅ Rate limiting real por API externa (Alpha Vantage, FMP, NewsAPI) — devuelve `429` al exceder la cuota.  
 
 ---
 
@@ -57,6 +59,9 @@ REDIS_DB=0
 DEBUG=True
 ENVIRONMENT=development
 SECRET_KEY=tu_clave
+
+# CORS (orígenes permitidos, separados por coma; por defecto "*")
+CORS_ORIGINS=http://localhost:3000,https://tudominio.com
 ```
 
 ---
@@ -75,17 +80,42 @@ Por defecto, correrá en `http://127.0.0.1:8000`
 ---
 
 ## 📡 Endpoints Disponibles
+### 🔹 **🩺 Estado del Servicio**
+```http
+GET /health
+```
+Verifica la conexión con Redis. Devuelve `200` si está todo ok, `503` si Redis no responde.
+
+### 🔹 **🔍 Buscar Instrumentos Financieros**
+```http
+GET /instruments?query=AAPL&id_type=TICKER&market=US
+```
+📌 **Parámetros:**
+- `query` → Identificador a buscar (Ejemplo: `AAPL`)
+- `id_type` → (`TICKER`, `ID_ISIN`, `ID_BB_GLOBAL`, `ID_SEDOL`, `ID_COMMON`, `ID_WERTPAPIER`, `ID_CUSIP`, `ID_CINS`, `ID_MIC`, `ID_EXCH_SYMBOL`; default `TICKER`)
+- `market` → Mercado/bolsa (Ejemplo: `US`; default `US`)
+
 ### 🔹 **📈 Obtener Precios de Acciones**
 ```http
 GET /prices?symbol=AAPL&interval=daily
 ```
 📌 **Parámetros:**
 - `symbol` → Símbolo bursátil (Ejemplo: `AAPL`)
-- `interval` → (`daily`, `1min`, `5min`, etc.)
+- `interval` → (`daily`, `1min`, `5min`, `15min`, `30min`, `60min`)
 
-### 🔹 **💰 Obtener Ratios Financieros**
+⚠️ Sujeto al límite de Alpha Vantage (5 llamadas/minuto) — devuelve `429` al excederlo.
+
+### 🔹 **💰 Obtener Estado de Resultados**
 ```http
 GET /financials?symbol=AAPL&period=annual
+```
+📌 **Parámetros:**
+- `symbol` → Símbolo bursátil (Ejemplo: `AAPL`)
+- `period` → (`annual` o `quarterly`)
+
+### 🔹 **📊 Obtener Ratios Financieros**
+```http
+GET /financials/ratios?symbol=AAPL&period=annual
 ```
 📌 **Parámetros:**
 - `symbol` → Símbolo bursátil (Ejemplo: `AAPL`)
@@ -99,6 +129,8 @@ GET /news?query=Apple&limit=5&sort_by=publishedAt
 - `query` → Palabra clave para buscar noticias.
 - `limit` → Máximo de noticias a devolver.
 - `sort_by` → (`relevancy`, `popularity`, `publishedAt`)
+
+Una búsqueda sin resultados devuelve `200` con `{"total_results": 0, "articles": []}`, no un error.
 
 ---
 
