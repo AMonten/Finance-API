@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse  # Importación añadida
-from typing import Optional, List, Dict, Union
+from typing import List, Dict, Union
 import logging
 from app.services import (
     alpha_vantage,
@@ -11,9 +11,8 @@ from app.services import (
     openfigi
 )
 from app.config import Config
-from app.schemas import FinancialRatios
+from app.schemas import FinancialRatios, NewsItem, FinancialData, InstrumentInfo, ErrorResponse
 from app.utils import cache
-from pydantic import BaseModel
 
 # Configurar aplicación FastAPI
 app = FastAPI(
@@ -34,34 +33,6 @@ app.add_middleware(
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Modelos Pydantic para respuestas (Actualizados)
-class NewsItem(BaseModel):
-    title: str
-    source: str
-    url: str
-    published_at: str
-    content: Optional[str]
-
-class FinancialData(BaseModel):
-    symbol: str
-    date: str
-    revenue: Optional[float]
-    net_income: Optional[float]
-    pe_ratio: Optional[float]
-
-class InstrumentInfo(BaseModel):
-    figi: str
-    name: str
-    ticker: str
-    market: str
-    security_type: str
-    currency: Optional[str] = None  # Campo opcional
-
-class ErrorResponse(BaseModel):
-    error: str
-    details: Optional[str]
-    code: Optional[int]  # Nuevo campo
 
 # Endpoints (Actualizados)
 @app.get("/", tags=["Root"])
@@ -143,7 +114,12 @@ async def get_prices(
             }
         )
 
-@app.get("/financials", response_model=Union[List[FinancialData], ErrorResponse], tags=["Fundamentales"])
+@app.get(
+    "/financials",
+    response_model=Union[List[FinancialData], ErrorResponse],
+    response_model_by_alias=False,  # FinancialData usa alias (netIncome/peRatio) solo para aceptar el JSON crudo de FMP; el contrato de esta API sigue siendo snake_case
+    tags=["Fundamentales"]
+)
 async def get_financials(
     symbol: str = Query(..., min_length=1),
     period: str = Query("annual", pattern="^(annual|quarterly)$")
