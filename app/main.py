@@ -22,11 +22,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configurar CORS para desarrollo
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=Config.CORS_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -129,7 +129,7 @@ async def get_prices(
         prices = alpha_vantage.get_stock_prices(symbol, interval)
         if "error" in prices:
             return JSONResponse(
-                status_code=400,
+                status_code=prices.get("code", 400),
                 content=prices
             )
         return prices
@@ -152,7 +152,7 @@ async def get_financials(
         financials = fmp.get_income_statement(symbol, period)
         if isinstance(financials, dict) and "error" in financials:
             return JSONResponse(
-                status_code=400,
+                status_code=financials.get("code", 400),
                 content=financials
             )
         return financials
@@ -173,7 +173,7 @@ async def get_financial_ratios(
         ratios = fmp.get_financial_ratios(symbol, period)
         if isinstance(ratios, dict) and "error" in ratios:
             return JSONResponse(
-                status_code=400,
+                status_code=ratios.get("code", 400),
                 content=ratios
             )
         return ratios
@@ -195,7 +195,7 @@ async def get_news(
         news_data = news.get_financial_news(query, limit, sort_by)
         if "error" in news_data:
             return JSONResponse(
-                status_code=400,
+                status_code=news_data.get("code", 400),
                 content=news_data
             )
         return news_data

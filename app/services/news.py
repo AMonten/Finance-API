@@ -4,6 +4,7 @@ import logging
 from typing import Dict, List, Union
 from datetime import datetime, timedelta
 from app.config import Config
+from app.utils import RateLimiter
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -36,7 +37,11 @@ def get_financial_news(
         
         if not 1 <= limit <= 100:
             raise ValueError("El límite debe estar entre 1 y 100")
-        
+
+        if not RateLimiter.check_limit("newsapi"):
+            logger.warning("Límite de llamadas a NewsAPI excedido")
+            return {"error": "Límite de llamadas a NewsAPI excedido", "code": 429}
+
         # Construir parámetros de la solicitud
         params = {
             "q": query,
