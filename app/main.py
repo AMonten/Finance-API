@@ -12,7 +12,7 @@ from app.services import (
 )
 from app.config import Config
 from app.schemas import FinancialRatios
-from app.utils import cache
+from app.utils import cache, RateLimiter
 from pydantic import BaseModel
 
 # Configurar aplicación FastAPI
@@ -22,11 +22,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configurar CORS para desarrollo
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=Config.CORS_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -125,6 +125,11 @@ async def get_prices(
     interval: str = Query("daily", pattern="^(daily|1min|5min|15min|30min|60min)$")
 ):
     """Obtener datos históricos de precios"""
+    if not RateLimiter.check_limit("alpha_vantage"):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Límite de solicitudes a Alpha Vantage excedido"}
+        )
     try:
         prices = alpha_vantage.get_stock_prices(symbol, interval)
         if "error" in prices:
@@ -148,6 +153,11 @@ async def get_financials(
     symbol: str = Query(..., min_length=1),
     period: str = Query("annual", pattern="^(annual|quarterly)$")
 ):
+    if not RateLimiter.check_limit("fmp"):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Límite de solicitudes a Financial Modeling Prep excedido"}
+        )
     try:
         financials = fmp.get_income_statement(symbol, period)
         if isinstance(financials, dict) and "error" in financials:
@@ -169,6 +179,11 @@ async def get_financial_ratios(
     period: str = Query("annual", pattern="^(annual|quarterly)$")
 ):
     """Obtener ratios financieros clave (liquidez, apalancamiento, rentabilidad)"""
+    if not RateLimiter.check_limit("fmp"):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Límite de solicitudes a Financial Modeling Prep excedido"}
+        )
     try:
         ratios = fmp.get_financial_ratios(symbol, period)
         if isinstance(ratios, dict) and "error" in ratios:
@@ -191,6 +206,11 @@ async def get_news(
     sort_by: str = Query("publishedAt", pattern="^(relevancy|popularity|publishedAt)$")
 ):
     """Obtener noticias financieras relevantes"""
+    if not RateLimiter.check_limit("newsapi"):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Límite de solicitudes a NewsAPI excedido"}
+        )
     try:
         news_data = news.get_financial_news(query, limit, sort_by)
         if "error" in news_data:
